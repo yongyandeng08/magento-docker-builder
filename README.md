@@ -44,7 +44,7 @@ Magento Cloud Docker requires Docker configuration files to be generated. Run:
 ./vendor/bin/ece-docker build:compose --mode="developer"
 ```
 
-This will generate the `docker-compose.yml` and other required config files.
+This will generate default the `docker-compose.yml` and other required config files.
 
 ### **4️⃣ Start Docker Services**
 
@@ -55,6 +55,8 @@ docker compose up -d
 ```
 
 This will start the required **database, web server, FPM, OpenSearch, Redis, and other services** in detached mode.
+
+Magento will be installed in a few seconds after `magento-fpm` is fully initialized.
 
 ### **5️⃣ Verify Running Containers**
 
@@ -100,8 +102,11 @@ Use the credentials you provided during installation.
 
 ## **📌 Notes**
 
+-   `magento-fpm` is the container
 -   If you encounter **missing static files (e.g., `static.php` 404 errors)**, ensure you have run:
     ```sh
     ./vendor/bin/ece-docker build:compose --mode="developer"
     ```
 -   Magento **authentication keys** may be required when installing enterprise dependencies.
+-   `magento-fpm` is the PHP process manager that runs Magento's PHP code. If you need to check logs or debug issues, you can inspect the FPM container logs.
+-   Always make changes to `docker-compose.override.yml`, as `docker-compose.yml` is auto-generated and may be overwritten.
