@@ -1,0 +1,48 @@
+name: "magento-docker-builder"
+system:
+  mode: "developer"
+
+services:
+  php:
+    version: "8.3"
+    extensions:
+      enabled:
+        - xsl
+        - sodium
+        - redis
+
+  mysql:
+    version: "10.6"
+    image: "mariadb"
+    environment:
+      MYSQL_DATABASE: "magento"
+      MYSQL_USER: "magento"
+      MYSQL_PASSWORD: "magento"
+      MYSQL_ROOT_PASSWORD: "root"
+    disk: 5120
+
+  redis:
+    version: "7.2"
+    image: "redis"
+
+  opensearch:
+    version: "2"
+    image: "opensearchproject/opensearch"
+
+hooks:
+  build: |
+    set -e
+    php ./vendor/bin/ece-tools run scenario/build/generate.xml
+    php ./vendor/bin/ece-tools run scenario/build/transfer.xml
+  deploy: "php ./vendor/bin/ece-tools run scenario/deploy.xml"
+  post_deploy: "php ./vendor/bin/ece-tools run scenario/post-deploy.xml"
+
+mounts:
+  var:
+    path: "var"
+  app-etc:
+    path: "app/etc"
+  pub-media:
+    path: "pub/media"
+  pub-static:
+    path: "pub/static"

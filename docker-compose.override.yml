@@ -1,0 +1,143 @@
+name: 'magento-cloud-docker'
+services:
+    db:
+        hostname: db.magento2.docker
+        container_name: magento-db
+        image: 'mariadb:10.6'
+        shm_size: 2gb
+        environment:
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_DATABASE=magento
+            - MYSQL_USER=magento
+            - MYSQL_PASSWORD=magento
+        ports:
+            - '3306'
+        volumes:
+            - '.:/app:delegated'
+            - mariadb_data:/var/lib/mysql
+        healthcheck:
+            test: 'mysqladmin ping -h localhost -proot'
+            interval: 30s
+            timeout: 30s
+            retries: 3
+        networks:
+            magento:
+                aliases:
+                    - db.magento2.docker
+    redis:
+        hostname: redis.magento2.docker
+        container_name: magento-redis
+        image: 'redis:7.2'
+        volumes:
+          - '.:/app:delegated'
+        ports:
+            - 6379
+        sysctls:
+            net.core.somaxconn: 1024
+        ulimits:
+            nproc: 65535
+            nofile:
+                soft: 20000
+                hard: 40000
+        healthcheck:
+            test: 'redis-cli ping || exit 1'
+            interval: 30s
+            timeout: 30s
+            retries: 3
+        networks:
+            magento:
+                aliases:
+                    - redis.magento2.docker
+    opensearch:
+        hostname: opensearch.magento2.docker
+        container_name: magento-opensearch
+        image: 'opensearchproject/opensearch:2'
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+        environment:
+            - cluster.name=docker-cluster
+            - discovery.type=single-node
+            - discovery.seed_hosts=opensearch
+            - bootstrap.memory_lock=true
+            - DISABLE_SECURITY_PLUGIN=true
+        healthcheck:
+            test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q 'green'"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+        networks:
+            magento:
+                aliases:
+                    - opensearch.magento2.docker
+    fpm:
+        image: 'magento/magento-cloud-docker-php:8.3-fpm-1.4.0'
+        container_name: magento-fpm
+        volumes:
+          - '.:/app:delegated'
+        networks:
+            magento:
+                aliases:
+                    - fpm.magento2.docker
+        depends_on:
+            db:
+                condition: service_healthy
+        command: ["./start-magento.sh"]
+    web:
+        hostname: web.magento2.docker
+        container_name: magento-web
+        image: 'magento/magento-cloud-docker-nginx:1.24-1.4.0'
+        volumes:
+            - '.:/app:delegated'
+        environment:
+            - WITH_XDEBUG=0
+            - NGINX_WORKER_PROCESSES=1
+            - NGINX_WORKER_CONNECTIONS=1024
+        networks:
+            magento:
+                aliases:
+                    - web.magento2.docker
+        depends_on:
+            fpm:
+                condition: service_started
+    varnish:
+        hostname: varnish.magento2.docker
+        container_name: magento-varnish
+        image: 'magento/magento-cloud-docker-varnish:6.6-1.4.0'
+        networks:
+            magento:
+                aliases:
+                    - varnish.magento2.docker
+        depends_on:
+            web:
+                condition: service_started
+    tls:
+        hostname: tls.magento2.docker
+        container_name: magento-tls
+        image: 'magento/magento-cloud-docker-nginx:1.24-1.4.0'
+        networks:
+            magento:
+                aliases:
+                    - magento2.docker
+        environment:
+            - NGINX_WORKER_PROCESSES=1
+            - NGINX_WORKER_CONNECTIONS=1024
+            - UPSTREAM_HOST=varnish
+            - UPSTREAM_PORT=80
+        ports:
+            - '80:80'
+            - '8443:443'
+        depends_on:
+            varnish:
+                condition: service_started
+
+volumes:
+    mariadb_data:
+        driver: local
+
+networks:
+    magento:
+        driver: bridge
+    magento-build:
+        driver: bridge

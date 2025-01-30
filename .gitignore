@@ -1,0 +1,9 @@
+*
+
+!.gitignore
+!composer.json
+!composer.lock
+!.magento.docker.yaml
+!docker-compose.override.yml
+!start-magento.sh
+!README.md
