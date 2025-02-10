@@ -31,7 +31,7 @@ services:
         volumes:
           - '.:/app:delegated'
         ports:
-            - 6379
+            - '6379:6379'
         sysctls:
             net.core.somaxconn: 1024
         ulimits:
