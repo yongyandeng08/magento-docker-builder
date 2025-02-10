@@ -61,6 +61,10 @@ php bin/magento cache:flush
 # Log successful completion
 echo "$(date '+%Y-%m-%d %H:%M:%S') - Magento installation and setup completed successfully."
 
+# Remove APM Service config
+echo "$(date '+%Y-%m-%d %H:%M:%S') - Removing APM Service..."
+rm /usr/local/etc/php/conf.d/zz-blackfire.ini
+
 # Start PHP-FPM to keep the container running
 echo "$(date '+%Y-%m-%d %H:%M:%S') - Starting PHP-FPM..."
 exec php-fpm -R
